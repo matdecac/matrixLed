@@ -6,8 +6,8 @@
 // Copyright (c) 2018 Mathias de Cacqueray-Valmenier. All rights reserved.
 // Repository created by Mathias de Cacqueray-Valmenier, You should read LICENSE
 
-
-#include "../libs/letterList.h"
+#include <Arduino.h>
+#include <letterList.h>
 
 const uint8_t NB_MATRIX = 1;
 
@@ -133,19 +133,61 @@ void movingLeter() {
 	fixedLetter(0, customArray);
 }
 
+const uint64_t MAXCHARLEN = 512;
+const char textDisplay[MAXCHARLEN] = "TRUC DE DINGUE\0";
+byte textDisplayBytes[MAXCHARLEN][NB_ROWS] = {B00000001};
+uint64_t textDisplayLen = 0;
+byte matrixDisplay[NB_MATRIX][NB_ROWS] = {B00000001};
+
+
+void displayText() {
+	// Serial.println("Test");
+	currentMillis = millis();
+	if (currentMillis - startMillis > period)
+	{
+		for (uint8_t indRow = 0; indRow < NB_ROWS; indRow++) {
+			byte lastChar = B00000000;
+			for (uint32_t indChar = 0; indChar < textDisplayLen; indChar++) {
+				byte bit = (textDisplayBytes[indChar][indRow] >> 7);
+				textDisplayBytes[indChar][indRow] = textDisplayBytes[indChar][indRow] << 1;
+				if (indChar == 0) {
+					lastChar = bit;
+				} else if (indChar > 0) {
+					textDisplayBytes[indChar - 1][indRow] |= bit & B0000001;
+				}
+				if (indChar == textDisplayLen - 1) {
+					textDisplayBytes[indChar][indRow] |= lastChar & B0000001;
+				}
+			}
+		}
+		startMillis = millis();
+	}
+}
 
 void setup() 
 {
+	// compute size of string to display
+	textDisplayLen = 0;
+	while (textDisplay[textDisplayLen] != '\0' && textDisplayLen < MAXCHARLEN) {
+		textDisplayLen++;
+	}
+	// assign byte to each letter
+	for (uint32_t ind; ind < textDisplayLen; ind++) {
+		cvtCharByte(textDisplay[ind], textDisplayBytes[ind]);
+	}
 	// Open serial port
 	// Serial.begin(9600);
-	
+	// textDisplay
 	// Set all used pins to OUTPUT
 	for (uint8_t iMat=0; iMat < NB_MATRIX; iMat++) {
 		resetMatrix(iMat, true);
 	}
-	memcpy(customArray, A, sizeof(EMPTY));
+	memcpy(customArray, textDisplayBytes[0], sizeof(EMPTY));
 	startMillis = millis();  //initial start time
 }
 void loop() {
-	movingLeter();
+	// fixedLetter(0, textDisplayBytes[0]);
+	// movingLeter();
+	displayText();
+	fixedLetter(0, textDisplayBytes[0]);
 }
