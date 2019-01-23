@@ -20,6 +20,86 @@ const tablePinsRow matrixDef[NB_MATRIX] = {
 	},
 };
 
+// array def of trigger hc595, 
+struct hc595def {
+	uint8_t serPin;	
+	uint8_t sckPin;	
+	uint8_t lsbPin; 
+	uint8_t rckPin; 
+	uint8_t nbOut; // nbOut = number of output used (starting at 0)
+};
+struct hc259def {
+	uint8_t a0Pin;	
+	uint8_t a1Pin;	
+	uint8_t a2Pin; 
+	uint8_t nbOut;  // nbOut = number of output used (a0, a1, a2)
+};
+const uint8_t NB_OUTPUT_ADDR = 8;
+const uint8_t NB_INPUT_ADDR = 3;
+const uint8_t matchAdress[NB_OUTPUT_ADDR][NB_INPUT_ADDR] = {
+	{LOW, LOW, LOW},
+	{LOW, LOW, HIGH},
+	{LOW, HIGH, LOW},
+	{LOW, HIGH, HIGH},
+	{HIGH, LOW, LOW},
+	{HIGH, LOW, HIGH},
+	{HIGH, HIGH, LOW},
+	{HIGH, HIGH, HIGH}
+};
+// TODO : complete this with the actual pin connected on the arduino
+const hc595def hc595cmd[16] = {
+	{0, 0, 0, 0, 4}, {0, 0, 0, 0, 8}, {0, 0, 0, 0, 8}, // petit cote n1
+	{0, 0, 0, 0, 7}, {0, 0, 0, 0, 8}, {0, 0, 0, 0, 8}, {0, 0, 0, 0, 8}, {0, 0, 0, 0, 8}, // grand cote n1
+	{0, 0, 0, 0, 4}, {0, 0, 0, 0, 8}, {0, 0, 0, 0, 8}, // petit cote n2
+	{0, 0, 0, 0, 7}, {0, 0, 0, 0, 8}, {0, 0, 0, 0, 8}, {0, 0, 0, 0, 8}, {0, 0, 0, 0, 8}, // grand cote n2
+};
+const hc259def hc259cmd[16] = {
+	{0, 0, 0, 8}, {0, 0, 0, 4}, // petit cote n1
+	{0, 0, 0, 8}, {0, 0, 0, 4}, // grand cote n1
+	{0, 0, 0, 8}, {0, 0, 0, 4}, // petit cote n2
+	{0, 0, 0, 8}, {0, 0, 0, 4}, // grand cote n2
+};
+
+void write595(byte data, hc595def thisHC595def) {
+	digitalWrite(thisHC595def.rckPin, LOW);
+	shiftOut(thisHC595def.serPin, thisHC595def.sckPin, thisHC595def.lsbPin, data);
+	digitalWrite(thisHC595def.rckPin, HIGH);
+}
+
+void fixedLetter2(uint8_t matrixNb, uint8_t dataToWrite[NB_ROWS])
+{ 
+	// Turn on each row in series
+	for (byte indRow = 0; indRow < NB_ROWS; indRow++)
+	{
+		// initiate row with HIGH
+		for (uint8_t indLed = 0; indLed < NB_OUTPUT_ADDR ; indLed++ ) {
+			for (uint8_t indReg = 0; indReg < NB_INPUT_ADDR ; indReg++ ) {
+				digitalWrite(matrixDef[matrixNb].row[indReg], matchAdress[indLed][indReg]);  
+			}
+		}
+		for (uint8_t indBit = 0; indBit < NB_ROWS; indBit++)
+		{
+			// only write if bit 1 asked
+			if ((dataToWrite[indRow] >> indBit) & 0x01) {
+				// loop on all accessible output
+				for (uint8_t indLed = 0; indLed < NB_OUTPUT_ADDR ; indLed++ ) {
+					// loop on register path
+					for (uint8_t indReg = 0; indReg < NB_INPUT_ADDR ; indReg++ ) {
+						digitalWrite(matrixDef[matrixNb].col[indReg], matchAdress[indLed][indReg]);  
+					}
+				}
+			}
+			delayMicroseconds(100);  // uncoment delay for diferent speed of display
+		}
+		// END row with LOW ==> HOW TO DO IT !!!
+		for (uint8_t indLed = 0; indLed < NB_OUTPUT_ADDR ; indLed++ ) {
+			for (uint8_t indReg = 0; indReg < NB_INPUT_ADDR ; indReg++ ) {
+				digitalWrite(matrixDef[matrixNb].row[indReg], matchAdress[indLed][indReg]);  
+			}
+		}
+	}
+}
+
 
 void resetMatrix(uint8_t iMat, bool isInit) {
 	// Set all used pins to OUTPUT
