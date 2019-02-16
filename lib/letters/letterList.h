@@ -13,7 +13,8 @@
 
 
 const uint8_t NB_ROWS = 10;
-const uint8_t NB_COLS = 8;
+const uint8_t NB_COLS = 118;
+const uint8_t NB_BYTE_DISPLAY = (int)floor((float)NB_COLS / 8.0) + 1;
 
 const byte A[NB_ROWS] = {
 	B00111100,
